@@ -19,18 +19,6 @@ class GameState:
         self.down_move = down_move
         self.visited = False
 
-    '''
-    # configuracao inicial do jogo: tanto board quanto config tem todas suas
-    # opcoes de jogadas igual a None
-    def __init__(self, y0x0, y0x1, y0x2, y1x0, y1x1, y1x2, y2x0, y2x1, y2x2):
-        self.data_matrix = [[y0x0, y0x1, y0x2], [y1x0, y1x1, y1x2], [y2x0, y2x1, y2x2]]
-        self.pred = None
-        self.left_move = None
-        self.right_move = None
-        self.up_move = None
-        self.down_move = None
-    '''
-
 class Game:
     def __init__(self, initial_config, result):
         self.current_move = initial_config
@@ -51,7 +39,7 @@ class Game:
             game_string += "\n"
         print(game_string)
 
-    def move_left(self):
+    def get_left_move_simulation(self):
         result_move = [row[:] for row in self.current_move.data_matrix] 
 
         for line_idx, line in enumerate(result_move):
@@ -68,7 +56,7 @@ class Game:
 
         return result_move
 
-    def move_right(self):
+    def get_right_move_simulation(self):
         result_move = [row[:] for row in self.current_move.data_matrix] 
 
         for line_idx, line in enumerate(result_move):
@@ -84,7 +72,7 @@ class Game:
                         result_move[line_idx][column_idx] = 0
         return result_move
 
-    def move_up(self):
+    def get_up_move_simulation(self):
         result_move = [row[:] for row in self.current_move.data_matrix] 
 
         for line_idx, line in enumerate(result_move):
@@ -100,7 +88,7 @@ class Game:
                         result_move[line_idx][column_idx] = 0
         return result_move
 
-    def move_down(self):
+    def get_down_move_simulation(self):
         result_move = [row[:] for row in self.current_move.data_matrix] 
 
         for line_idx, line in reversed(list(enumerate(result_move))):
@@ -120,15 +108,23 @@ class Player:
     def __init__(self, game):
         self.game = game
         self.current_move = game.current_move
-        self.tree = [game.current_move]
+        self.queue = [game.current_move]
 
     def solve_game(self):
         result_array = []
-
-        for i in self.tree:
+        for i in self.queue:
             if i.visited == False:
                 self.game.current_move = i
-                if self.game.current_move.data_matrix == self.game.result.data_matrix: 
+
+                self.register_l_movement()
+                self.register_d_movement()
+                self.register_r_movement()
+                self.register_u_movement()
+
+                i.visited = True
+
+                # se resultado for encontrado
+                if (self.game.current_move.data_matrix == self.game.result.data_matrix):
                     result_array.append(self.game.current_move)
 
                     # criando array do resultado obtido
@@ -140,26 +136,20 @@ class Player:
                     # printando visualmente o resultado obtido
                     for i in reversed(result_array):
                         self.game.print_board(i)
+
                     break
-
-                self.register_l_movement()
-                self.register_d_movement()
-                self.register_r_movement()
-                self.register_u_movement()
-
-                i.visited = True
 
     def register_l_movement(self):
         if (self.game.current_move.left_move == "fim"):
             return
 
-        elif (self.game.move_left() == self.game.current_move.data_matrix):
+        elif (self.game.get_left_move_simulation() == self.game.current_move.data_matrix):
             self.game.current_move.left_move = "fim"
             return
 
         else:
-            for g in self.tree:
-                if (g.data_matrix == self.game.move_left()):
+            for g in self.queue:
+                if (g.data_matrix == self.game.get_left_move_simulation()):
                     if (g.path_size < self.current_move.path_size + 1):
                         self.game.current_move.left_move == "fim"
                         return
@@ -173,21 +163,21 @@ class Player:
                         elif(g.pred.down_move == g):
                             g.pred.down_move == "fim"
 
-            left_move_game_state = GameState(self.game.move_left(), self.game.current_move.path_size + 1, self.game.current_move, None, "fim", None, None)
+            left_move_game_state = GameState(self.game.get_left_move_simulation(), self.game.current_move.path_size + 1, self.game.current_move, None, "fim", None, None)
             self.game.current_move.left_move = left_move_game_state
-            self.tree.append(left_move_game_state)
+            self.queue.append(left_move_game_state)
 
     def register_r_movement(self):
         if (self.game.current_move.right_move == "fim"):
             return
 
-        elif (self.game.move_right() == self.game.current_move.data_matrix):
+        elif (self.game.get_right_move_simulation() == self.game.current_move.data_matrix):
             self.game.current_move.right_move = "fim"
             return
 
         else:
-            for g in self.tree:
-                if (g.data_matrix == self.game.move_right()):
+            for g in self.queue:
+                if (g.data_matrix == self.game.get_right_move_simulation()):
                     if (g.path_size < self.current_move.path_size + 1):
                         self.game.current_move.right_move == "fim"
                         return
@@ -201,21 +191,21 @@ class Player:
                         elif(g.pred.down_move == g):
                             g.pred.down_move == "fim"
 
-            right_move_game_state = GameState(self.game.move_right(), self.game.current_move.path_size + 1, self.game.current_move, "fim", None, None, None)
+            right_move_game_state = GameState(self.game.get_right_move_simulation(), self.game.current_move.path_size + 1, self.game.current_move, "fim", None, None, None)
             self.game.current_move.right_move = right_move_game_state
-            self.tree.append(right_move_game_state)
+            self.queue.append(right_move_game_state)
 
     def register_u_movement(self):
         if (self.game.current_move.up_move == "fim"):
             return
 
-        elif (self.game.move_up() == self.game.current_move.data_matrix):
+        elif (self.game.get_up_move_simulation() == self.game.current_move.data_matrix):
             self.game.current_move.up_move = "fim"
             return
 
         else:
-            for g in self.tree:
-                if (g.data_matrix == self.game.move_up()):
+            for g in self.queue:
+                if (g.data_matrix == self.game.get_up_move_simulation()):
                     if (g.path_size < self.current_move.path_size + 1):
                         self.game.current_move.up_move == "fim"
                         return
@@ -229,22 +219,22 @@ class Player:
                         elif(g.pred.down_move == g):
                             g.pred.down_move == "fim"
 
-            up_move_game_state = GameState(self.game.move_up(), self.game.current_move.path_size + 1, self.game.current_move, None, None, None, "fim")
+            up_move_game_state = GameState(self.game.get_up_move_simulation(), self.game.current_move.path_size + 1, self.game.current_move, None, None, None, "fim")
             self.game.current_move.up_move = up_move_game_state
-            self.tree.append(up_move_game_state)
+            self.queue.append(up_move_game_state)
 
 
     def register_d_movement(self):
         if (self.game.current_move.down_move == "fim"):
             return
 
-        elif (self.game.move_down() == self.game.current_move.data_matrix):
+        elif (self.game.get_down_move_simulation() == self.game.current_move.data_matrix):
             self.game.current_move.down_move = "fim"
             return
 
         else:
-            for g in self.tree:
-                if (g.data_matrix == self.game.move_down()):
+            for g in self.queue:
+                if (g.data_matrix == self.game.get_down_move_simulation()):
                     if (g.path_size < self.current_move.path_size + 1):
                         self.game.current_move.right_move == "fim"
                         return
@@ -258,9 +248,9 @@ class Player:
                         elif(g.pred.down_move == g):
                             g.pred.down_move == "fim"
 
-            down_move_game_state = GameState(self.game.move_down(), self.game.current_move.path_size + 1, self.game.current_move, None, None, "fim", None)
+            down_move_game_state = GameState(self.game.get_down_move_simulation(), self.game.current_move.path_size + 1, self.game.current_move, None, None, "fim", None)
             self.game.current_move.down_move = down_move_game_state
-            self.tree.append(down_move_game_state)
+            self.queue.append(down_move_game_state)
 
 #################################################################################
 # MAIN
@@ -293,7 +283,6 @@ def main():
     result = to3x3matrix([int(item) for item in args.matriz_resultado.split(',')] )
 
     a_game = Game(GameState(initial_config, 0,  None, None, None, None, None), GameState(result, 0, None, None, None, None, None))
-
     solver = Player(a_game)
 
     print("\nCONFIGURACAO DE JOGO INICIAL:")
